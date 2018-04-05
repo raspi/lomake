@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="dev" type="GoApplicationRunConfiguration" factoryName="Go Application" singleton="true">
+    <module name="lomake" />
+    <working_directory value="$PROJECT_DIR$/" />
+    <go_parameters value="-i" />
+    <kind value="DIRECTORY" />
+    <filePath value="$PROJECT_DIR$/" />
+    <directory value="$PROJECT_DIR$/" />
+    <output_directory value="$PROJECT_DIR$/bin" />
+    <method />
+  </configuration>
+</component>
