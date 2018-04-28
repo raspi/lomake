@@ -47,7 +47,7 @@ var DecoratorMap = map[string]DecoratorType{
 }
 
 // Apply decorator to a single field
-func ApplyDecorator(field FormFieldDescription, decorators []DecoratorType) (output []byte, err error) {
+func ApplyDecorator(field FormFieldDescription, templates map[DecoratorType]string) (output []byte, err error) {
 
 	var tmpWriter bytes.Buffer
 	var out bytes.Buffer
@@ -55,8 +55,8 @@ func ApplyDecorator(field FormFieldDescription, decorators []DecoratorType) (out
 	var dec Decorator
 	dec.Parent = ""
 
-	for _, decorator := range decorators {
-		tpl, err := template.New("").Parse(DecoratorTemplates[decorator])
+	for _, decorator := range DecoratorChains[DecoratorMap[field.Type]] {
+		tpl, err := template.New("").Parse(templates[decorator])
 		if err != nil {
 			return nil, err
 		}
@@ -82,17 +82,17 @@ func ApplyDecorator(field FormFieldDescription, decorators []DecoratorType) (out
 
 
 // Apply decorators to all fields
-func ApplyDecorators(fields []FormFieldDescription, tpl *template.Template, decorators map[DecoratorType][]DecoratorType) (output []byte, err error) {
+func ApplyDecorators(fields []FormFieldDescription, templates map[DecoratorType]string) (output []byte, err error) {
 
-	if len(decorators) == 0 {
-		decorators = DecoratorChains
+	if len(templates) == 0 {
+		templates = DecoratorTemplates
 	}
 
 	var out bytes.Buffer
 
 	for _, item := range fields {
 
-		output, err := ApplyDecorator(item, decorators[DecoratorMap[item.Type]])
+		output, err := ApplyDecorator(item, templates)
 		if err != nil {
 			return nil, err
 		}
