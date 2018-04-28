@@ -25,6 +25,7 @@ func NewStructureDescription() StructureDescription {
 	}
 }
 
+// Get the tag from struct `tagName:"tagValue"`
 func ReadStructTag(tagName string, tag reflect.StructTag) (values []string, err error) {
 	value, ok := tag.Lookup(tagName)
 
@@ -41,13 +42,33 @@ func ConvertStructToFieldDescription(field reflect.StructField) (ffd FormFieldDe
 
 	// Get type
 	typetagvalues, err := ReadStructTag("type", field.Tag)
+	if err != nil {
+		return ffd, err
+	}
+
 	if len(typetagvalues) == 1 {
 		ffd.Type = typetagvalues[0]
+	}
+
+	// JSON tag
+	jsontagvalues, err := ReadStructTag("json", field.Tag)
+	if err != nil {
+		return ffd, err
+	}
+	for idx, item := range jsontagvalues {
+		if idx == 0 && item != "" {
+			ffd.Name = item
+		}
+
+		if item == "omitempty" {
+			ffd.Required = true
+		}
 	}
 
 	return ffd, nil
 }
 
+// Convert struct into StructureDescription
 func ReadStructDescription(i interface{}) (form StructureDescription, err error) {
 	if reflect.TypeOf(i).Elem().Kind() != reflect.Struct {
 		return form, errors.New(fmt.Sprintf("Not a struct"))
@@ -55,7 +76,7 @@ func ReadStructDescription(i interface{}) (form StructureDescription, err error)
 
 	structName := reflect.TypeOf(i).Elem()
 
-	var j []FormFieldDescription
+	var fields []FormFieldDescription
 
 	t := reflect.TypeOf(i).Elem()
 
@@ -66,11 +87,13 @@ func ReadStructDescription(i interface{}) (form StructureDescription, err error)
 		}
 
 		ffd.Description = fmt.Sprintf("form.%s.%s", structName, ffd.Name)
+		ffd.Placeholder = fmt.Sprintf("form.%s.%s.placeholder", structName, ffd.Name)
+		ffd.Required = true
 
-		j = append(j, ffd)
+		fields = append(fields, ffd)
 	}
 
-	form.Fields = j
+	form.Fields = fields
 
 	return form, nil
 }
