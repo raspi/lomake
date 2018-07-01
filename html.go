@@ -3,10 +3,16 @@ package lomake
 import (
 	"html/template"
 	"bytes"
+	"fmt"
+	"errors"
+	"golang.org/x/text/message"
 )
 
-type Decorator struct {
-	Item   FormFieldDescription
+// Template for generating HTML
+var HTMLTemplate *template.Template
+
+type decorator struct {
+	Item   formFieldDescription
 	Parent template.HTML
 }
 
@@ -21,14 +27,12 @@ const (
 	INPUT_HIDDEN
 )
 
-//type DecoratorTemplate string
-
 var DecoratorTemplates = map[DecoratorType]string{
 	DIV:            `<div class="form-group{{ if .Item.Required }} required{{ end }}">{{- .Parent -}}</div>`,
-	LABEL:          `<label for="{{- .Item.Name -}}">{{ if .Item.Required }}* {{ end }}{{- .Item.Description -}}</label>{{- .Parent -}}`,
-	TEXTAREA:       `{{- .Parent -}}<textarea class="form-control" name="{{- .Item.Name -}}" id="{{- .Item.Name -}}" placeholder="{{- .Item.Placeholder -}}">{{- .Item.Value -}}</textarea>`,
-	INPUT_PASSWORD: `{{- .Parent -}}<input class="form-control" type="password" name="{{- .Item.Name -}}" id="{{- .Item.Name -}}" value="{{- .Item.Value -}}" placeholder="{{- .Item.Placeholder -}}" />`,
-	INPUT_TEXT:     `{{- .Parent -}}<input class="form-control" type="text" name="{{- .Item.Name -}}" id="{{- .Item.Name -}}" value="{{- .Item.Value -}}" placeholder="{{- .Item.Placeholder -}}" />`,
+	LABEL:          `<label for="{{- .Item.Name -}}">{{ if .Item.Required }}* {{ end }}{{- T .Item.Description -}}</label>{{- .Parent -}}`,
+	TEXTAREA:       `{{- .Parent -}}<textarea class="form-control" name="{{- .Item.Name -}}" id="{{- .Item.Name -}}" placeholder="{{- T .Item.Placeholder -}}">{{- .Item.Value -}}</textarea>`,
+	INPUT_PASSWORD: `{{- .Parent -}}<input class="form-control" type="password" name="{{- .Item.Name -}}" id="{{- .Item.Name -}}" value="{{- .Item.Value -}}" placeholder="{{- T .Item.Placeholder -}}" />`,
+	INPUT_TEXT:     `{{- .Parent -}}<input class="form-control" type="text" name="{{- .Item.Name -}}" id="{{- .Item.Name -}}" value="{{- .Item.Value -}}" placeholder="{{- T .Item.Placeholder -}}" />`,
 	INPUT_HIDDEN:   `{{- .Parent -}}<input type="hidden" name="{{- .Item.Name -}}" id="{{- .Item.Name -}}" value="{{- .Item.Value -}}" />`,
 }
 
@@ -47,24 +51,39 @@ var DecoratorMap = map[string]DecoratorType{
 }
 
 // Apply decorator to a single field
-func ApplyDecorator(field FormFieldDescription, templates map[DecoratorType]string) (output []byte, err error) {
+func applyDecorator(field formFieldDescription) (output []byte, err error) {
 
 	var tmpWriter bytes.Buffer
 	var out bytes.Buffer
 
-	var dec Decorator
+	var dec decorator
 	dec.Parent = ""
 
-	for _, decorator := range DecoratorChains[DecoratorMap[field.Type]] {
-		tpl, err := template.New("").Parse(templates[decorator])
+	for _, decorator := range DecoratorChains[DecoratorMap[field.FieldType]] {
+		maintpl, err := HTMLTemplate.Clone()
+
 		if err != nil {
 			return nil, err
+		}
+
+		// Register template functions
+		maintpl = maintpl.Funcs(template.FuncMap{
+			"T": func(s string, a ...interface{}) string {
+				// Translator
+				ref := message.Key(s, fmt.Sprintf(`NOT TRANSLATED: '%v'`, s))
+				return Translator.Sprintf(ref, a...)
+			},
+		})
+
+		tpl, err := maintpl.Parse(DecoratorTemplates[decorator])
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf(`lomake template parsing error: %v`, err))
 		}
 
 		tmpWriter.Reset()
 		dec.Item = field
 
-		err = tpl.Execute(&tmpWriter, dec)
+		err = tpl.Execute(&tmpWriter, &dec)
 		if err != nil {
 			return nil, err
 		}
@@ -80,19 +99,12 @@ func ApplyDecorator(field FormFieldDescription, templates map[DecoratorType]stri
 	return out.Bytes(), err
 }
 
-
 // Apply decorators to all fields
-func ApplyDecorators(fields []FormFieldDescription, templates map[DecoratorType]string) (output []byte, err error) {
-
-	if len(templates) == 0 {
-		templates = DecoratorTemplates
-	}
-
+func applyDecorators(fields []formFieldDescription) (output []byte, err error) {
 	var out bytes.Buffer
 
 	for _, item := range fields {
-
-		output, err := ApplyDecorator(item, templates)
+		output, err := applyDecorator(item)
 		if err != nil {
 			return nil, err
 		}
@@ -109,4 +121,21 @@ func ApplyDecorators(fields []FormFieldDescription, templates map[DecoratorType]
 	}
 
 	return out.Bytes(), nil
+}
+
+// Convert struct into HTML form
+func New(iface interface{}) (h template.HTML, err error) {
+	form, err := readStructDescription(iface)
+	if err != nil {
+		return h, err
+	}
+
+	out, err := applyDecorators(form.fields)
+	if err != nil {
+		return h, err
+	}
+
+	h = template.HTML(out)
+
+	return h, nil
 }

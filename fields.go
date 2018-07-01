@@ -6,40 +6,40 @@ import (
 )
 
 // Generic structure
-type FormFieldDescription struct {
-	Name        string `json:"name,"` // Field's name, for example "phonenumber"
-	Description string `json:"description,"` // Field's description, for example "Phone number"
-	Type        string `json:"type,"` // Field's type, for example "input"
-	Required    bool   `json:"req"` // Is field required y/n?
+type formFieldDescription struct {
+	Name        string `json:"name,"`                 // Field's name, for example "phonenumber"
+	Description string `json:"description,"`          // Field's description, for example "Phone number"
+	FieldType   string `json:"type,"`                 // Field's type, for example "input"
+	Required    bool   `json:"req"`                   // Is field required y/n?
 	Placeholder string `json:"placeholder,omitempty"` // Field's placeholder description, for example "Your phone number"
-	Value       string `json:"value,omitempty"` // Field's value, for example initial value "555-1234"
+	Value       string `json:"value,omitempty"`       // Field's value, for example initial value "555-1234"
 }
 
-func NewFormFieldDescription() FormFieldDescription {
-	return FormFieldDescription{
-		Type:        "input",
+func newFormFieldDescription() formFieldDescription {
+	return formFieldDescription{
+		FieldType:   `input`,
 		Required:    true,
-		Placeholder: "",
-		Value:       "",
+		Placeholder: ``,
+		Value:       ``,
 	}
 }
 
-func OverrideFieldTypes(replaceMap map[string]string, sd StructureDescription) StructureDescription {
-	for idx, item := range sd.Fields {
-		sd.Fields[idx] = OverrideFieldType(replaceMap, item)
+func overrideFieldTypes(replaceMap map[string]string, sd structureDescription) structureDescription {
+	for idx, item := range sd.fields {
+		sd.fields[idx] = overrideFieldType(replaceMap, item)
 	}
 
 	return sd
 }
 
-func OverrideFieldType(replaceMap map[string]string, ffd FormFieldDescription) FormFieldDescription {
-	ffd.Type = replaceMap[ffd.Type]
+func overrideFieldType(replaceMap map[string]string, ffd formFieldDescription) formFieldDescription {
+	ffd.FieldType = replaceMap[ffd.FieldType]
 	return ffd
 }
 
-func (ffd *FormFieldDescription) ReadJsonTag(tag reflect.StructTag) {
+func (ffd *formFieldDescription) readJsonTag(tag reflect.StructTag) {
 	// Parse json tag
-	jsontagvalues, err := ReadStructTag("json", tag)
+	jsontagvalues, err := readStructTag("json", tag)
 	if err == nil {
 		for idx, t := range jsontagvalues {
 			t = strings.TrimSpace(t)

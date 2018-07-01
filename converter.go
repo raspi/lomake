@@ -5,28 +5,32 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"golang.org/x/text/message"
 )
 
-type StructureDescription struct {
-	Title             string                 `json:",omitempty"`
-	Description       string                 `json:",omitempty"`
-	InfoIcon          string                 `json:",omitempty"`
-	InfoUrl           string                 `json:",omitempty"`
-	Fields            []FormFieldDescription `json:","`
-	SubmitDescription string                 `json:","`
+type structureDescription struct {
+	title             string                 `json:",omitempty"`
+	description       string                 `json:",omitempty"`
+	infoIcon          string                 `json:",omitempty"`
+	infoUrl           string                 `json:",omitempty"`
+	fields            []formFieldDescription `json:","`
+	submitDescription string                 `json:","`
 }
 
-func NewStructureDescription() StructureDescription {
-	return StructureDescription{
-		Title:             "",
-		Description:       "",
-		Fields:            []FormFieldDescription{},
-		SubmitDescription: "default.form.submit",
+// Translate form labels, placeholders, ..
+var Translator *message.Printer
+
+func NewStructureDescription() structureDescription {
+	return structureDescription{
+		title:             "",
+		description:       "",
+		fields:            []formFieldDescription{},
+		submitDescription: "default.form.submit",
 	}
 }
 
 // Get the tag from struct `tagName:"tagValue"`
-func ReadStructTag(tagName string, tag reflect.StructTag) (values []string, err error) {
+func readStructTag(tagName string, tag reflect.StructTag) (values []string, err error) {
 	value, ok := tag.Lookup(tagName)
 
 	if !ok {
@@ -36,22 +40,22 @@ func ReadStructTag(tagName string, tag reflect.StructTag) (values []string, err 
 	return strings.Split(value, ","), nil
 }
 
-func ConvertStructToFieldDescription(field reflect.StructField) (ffd FormFieldDescription, err error) {
+func convertStructToFieldDescription(field reflect.StructField) (ffd formFieldDescription, err error) {
 	ffd.Name = field.Name
-	ffd.Type = strings.ToLower(field.Type.Name())
+	ffd.FieldType = strings.ToLower(field.Type.Name())
 
 	// Get type
-	typetagvalues, err := ReadStructTag("type", field.Tag)
+	typetagvalues, err := readStructTag("type", field.Tag)
 	if err != nil {
 		return ffd, err
 	}
 
 	if len(typetagvalues) == 1 {
-		ffd.Type = typetagvalues[0]
+		ffd.FieldType = typetagvalues[0]
 	}
 
 	// JSON tag
-	jsontagvalues, err := ReadStructTag("json", field.Tag)
+	jsontagvalues, err := readStructTag("json", field.Tag)
 	if err != nil {
 		return ffd, err
 	}
@@ -69,31 +73,34 @@ func ConvertStructToFieldDescription(field reflect.StructField) (ffd FormFieldDe
 }
 
 // Convert struct into StructureDescription
-func ReadStructDescription(i interface{}) (form StructureDescription, err error) {
-	if reflect.TypeOf(i).Elem().Kind() != reflect.Struct {
+func readStructDescription(iface interface{}) (form structureDescription, err error) {
+	if reflect.TypeOf(iface).Elem().Kind() != reflect.Struct {
 		return form, errors.New(fmt.Sprintf("Not a struct"))
 	}
 
-	structName := reflect.TypeOf(i).Elem()
+	//structName := reflect.TypeOf(iface).Elem().String()
+	structName := strings.Split(reflect.TypeOf(iface).Elem().String(), `.`)[0]
 
-	var fields []FormFieldDescription
+	var fields []formFieldDescription
 
-	t := reflect.TypeOf(i).Elem()
+	t := reflect.TypeOf(iface).Elem()
+	v := reflect.ValueOf(iface).Elem()
 
 	for i := 0; i < t.NumField(); i++ {
-		ffd, err := ConvertStructToFieldDescription(t.Field(i))
+		ffd, err := convertStructToFieldDescription(t.Field(i))
 		if err != nil {
 			return form, err
 		}
 
-		ffd.Description = fmt.Sprintf("form.%s.%s", structName, ffd.Name)
-		ffd.Placeholder = fmt.Sprintf("form.%s.%s.placeholder", structName, ffd.Name)
+		ffd.Description = fmt.Sprintf("form.%v.%v", structName, ffd.Name)
+		ffd.Placeholder = fmt.Sprintf("form.%v.%v.placeholder", structName, ffd.Name)
 		ffd.Required = true
+		ffd.Value = v.Field(i).String()
 
 		fields = append(fields, ffd)
 	}
 
-	form.Fields = fields
+	form.fields = fields
 
 	return form, nil
 }
