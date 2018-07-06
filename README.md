@@ -66,21 +66,13 @@ func main() {
 
 	// Render form
 	var form RegisterForm
-
-	out, err := lomake.New(&form)
-
-	if err != nil {
-		log.Fatalf(`error: %v`, err)
-	}
-
 	view := struct {
 		Form template.HTML
 	}{
-		Form: out,
+		Form: form.HTML(),
 	}
 
 	page.Execute(&buf, &view)
-
 	fmt.Println(buf.String())
 }
 
