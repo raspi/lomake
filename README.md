@@ -1,7 +1,59 @@
 # lomake
 HTML Form generator from Go structs
 
+With lomake HTML form for registration:
+```html
+<form id="pageform" action="/api/account/register.json" method="post">
+    <!-- User -->
+    <div class="form-group required"><label for="Username">* User name</label>
+        <input class="form-control" type="text"
+               name="Username" id="Username"
+               value=""
+               placeholder="Enter your user name"/>
+    </div>
+    
+    <!-- Email -->
+    <div class="form-group required"><label for="EmailAddress">* E-mail address</label>
+        <input class="form-control"
+               type="text"
+               name="EmailAddress"
+               id="EmailAddress" value=""
+               placeholder="Enter your e-mail"/>
+    </div>
+
+    <!-- Password -->
+    <div class="form-group required"><label for="Password">* Password</label>
+        <input class="form-control" type="password"
+               name="Password" id="Password"
+               value=""
+               placeholder="%mYs3cr37p455w0rd"/>
+    </div>
+    <!-- Password (again) -->
+    <div class="form-group required"><label for="Password2">* Password (again)</label>
+        <input class="form-control"
+               type="password"
+               name="Password2"
+               id="Password2" value=""
+               placeholder="%mYs3cr37p455w0rd"/>
+    </div>
+
+    <!-- Submit -->
+    <input id="formsubmit" type="submit" class="btn-primary" value="Send"/>
+</form>
 ```
+Becomes:
+```go
+type RegisterForm struct {
+	Username     string `json:"," lomaketype:"input.text"`
+	EmailAddress string `json:"," lomaketype:"input.text"`
+	Password     string `json:"," lomaketype:"input.password"`
+	Password2    string `json:"," lomaketype:"input.password"`
+}
+```
+
+It also supports internationalization (i18n) out of the box, so that all field placeholders etc can be translated.
+
+```go
 package main
 
 import (
