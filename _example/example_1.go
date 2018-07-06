@@ -60,19 +60,17 @@ func main() {
 	var buf bytes.Buffer
 	page, err := t.Clone()
 
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Render form
 	var form RegisterForm
-
-	out, err := lomake.New(&form)
-
-	if err != nil {
-		log.Fatalf(`error: %v`, err)
-	}
 
 	view := struct {
 		Form template.HTML
 	}{
-		Form: out,
+		Form: form.HTML(),
 	}
 
 	page.Execute(&buf, &view)
