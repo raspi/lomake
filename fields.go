@@ -39,9 +39,9 @@ func overrideFieldType(replaceMap map[string]string, ffd formFieldDescription) f
 
 func (ffd *formFieldDescription) readJsonTag(tag reflect.StructTag) {
 	// Parse json tag
-	jsontagvalues, err := readStructTag("json", tag)
+	jsonTagValues, err := readStructTag("json", tag)
 	if err == nil {
-		for idx, t := range jsontagvalues {
+		for idx, t := range jsonTagValues {
 			t = strings.TrimSpace(t)
 
 			if t == "" {

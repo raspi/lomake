@@ -18,6 +18,7 @@ type decorator struct {
 
 type DecoratorType uint64
 
+//
 const (
 	DIV            DecoratorType = iota
 	LABEL
@@ -27,6 +28,8 @@ const (
 	INPUT_HIDDEN
 )
 
+// Base HTML templates
+// .Parent is the parent decorator
 var DecoratorTemplates = map[DecoratorType]string{
 	DIV:            `<div class="form-group{{ if .Item.Required }} required{{ end }}">{{- .Parent -}}</div>`,
 	LABEL:          `<label for="{{- .Item.Name -}}">{{ if .Item.Required }}* {{ end }}{{- T .Item.Description -}}</label>{{- .Parent -}}`,
@@ -36,6 +39,7 @@ var DecoratorTemplates = map[DecoratorType]string{
 	INPUT_HIDDEN:   `{{- .Parent -}}<input type="hidden" name="{{- .Item.Name -}}" id="{{- .Item.Name -}}" value="{{- .Item.Value -}}" />`,
 }
 
+// Order of how decorators are applied
 var DecoratorChains = map[DecoratorType][]DecoratorType{
 	INPUT_TEXT:     {INPUT_TEXT, LABEL, DIV},
 	INPUT_PASSWORD: {INPUT_PASSWORD, LABEL, DIV},
@@ -43,6 +47,7 @@ var DecoratorChains = map[DecoratorType][]DecoratorType{
 	TEXTAREA:       {TEXTAREA, LABEL, DIV},
 }
 
+// map string into decorator
 var DecoratorMap = map[string]DecoratorType{
 	"input.text":     INPUT_TEXT,
 	"input.password": INPUT_PASSWORD,
@@ -59,6 +64,7 @@ func applyDecorator(field formFieldDescription) (output []byte, err error) {
 	var dec decorator
 	dec.Parent = ""
 
+	// Apply decorators in order
 	for _, decorator := range DecoratorChains[DecoratorMap[field.FieldType]] {
 		maintpl, err := HTMLTemplate.Clone()
 
@@ -70,7 +76,7 @@ func applyDecorator(field formFieldDescription) (output []byte, err error) {
 		maintpl = maintpl.Funcs(template.FuncMap{
 			"T": func(s string, a ...interface{}) string {
 				// Translator
-				ref := message.Key(s, fmt.Sprintf(`NOT TRANSLATED: '%v'`, s))
+				ref := message.Key(s, fmt.Sprintf(`NOT TRANSLATED: '%v' (lomake)`, s))
 				return Translator.Sprintf(ref, a...)
 			},
 		})
